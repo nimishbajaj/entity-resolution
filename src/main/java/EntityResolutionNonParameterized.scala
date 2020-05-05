@@ -6,7 +6,7 @@ import org.apache.spark.graphx.{Edge, Graph, PartitionID, VertexId}
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.{Column, DataFrame, Dataset, Row, SparkSession}
 
-object EntityResolution {
+object EntityResolutionNonParameterized {
 
   @transient lazy val log: Logger = Logger.getLogger(getClass.getName)
 
@@ -34,9 +34,9 @@ object EntityResolution {
 //    mirror.printSchema()
 
     def conditions(matchCols: Seq[String]): Column = {
-      col("ecid")===col("_ecid") ||
-        (col("visid_high")===col("_visid_high") &&
-          col("visid_low")===col("_visid_low") ) ||
+//      col("ecid")===col("_ecid") ||
+//        (col("visid_high")===col("_visid_high") &&
+//          col("visid_low")===col("_visid_low") ) ||
         matchCols.map(c => col(c)===col("_"+c)).reduce(_ && _)
     }
 
@@ -47,7 +47,7 @@ object EntityResolution {
 
     // 
 
-    val edges = records.join(mirror, conditions(Seq("zip", "city", "ip", "device")))
+    val edges = records.join(mirror, conditions(Seq("zip", "city", "ip")))
 
     import spark.implicits._
     val edgesRDD = edges.select("ecid","_ecid")
