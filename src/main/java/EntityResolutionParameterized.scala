@@ -1,6 +1,6 @@
 import org.apache.log4j.Logger
 import org.apache.spark.sql.functions._
-import org.apache.spark.sql.types.{LongType, StringType, StructField, StructType}
+import org.apache.spark.sql.types.{IntegerType, LongType, StringType, StructField, StructType}
 import org.apache.spark.graphx._
 import org.apache.spark.graphx.{Edge, Graph, PartitionID, VertexId}
 import org.apache.spark.rdd.RDD
@@ -33,7 +33,22 @@ object EntityResolutionParameterized {
     "_" + columnName
   }
 
-  def resolve(path: String, matchCols: Map[String, Int], idCol: String, spark: SparkSession): Unit = {
+  def matchCriteria(c: String, maxDiff: Int): Column = {
+    if(maxDiff==0){
+      (col(c) === col(gm(c))).cast(IntegerType)
+    } else {
+//      (soundex(col(c)) === soundex(col(gm(c)))).cast(IntegerType)
+      (length(col(c)) - levenshtein(col(c), col(gm(c))))/length(col(c))
+    }
+  }
+
+
+  def conditions(matchCols: Map[String, (Int, Int, Int)]): Column = {
+    matchCols.map(c => matchCriteria(c._1, c._2._1)*c._2._2).reduce(_ + _)
+  }
+
+
+  def resolve(path: String, matchCols: Map[String, (Int, Int, Int)], threshold: Double, idCol: String, spark: SparkSession): Unit = {
     // generate edges
     import spark.implicits._
 
@@ -42,10 +57,31 @@ object EntityResolutionParameterized {
     println(s"Number of records before Entity Resolution ${mirror.count()}")
     mirror.show()
 
-    val edges = records.join(mirror, conditions(matchCols))
+    val ruleset = matchCols.map(c => s"Column: ${c._1} \n Error Tolerance: ${c._2._1} \n Weight: ${c._2._2} \n\n").reduce(_ + _)
+
+    println(s"Rule Set: \n $ruleset")
+    println(s"Threshold: $threshold")
+
+    val sumWeights = matchCols.map(c => c._2._2).sum
+
+    var edges: Dataset[Row] = records
+      .join(mirror, (conditions(matchCols) / sumWeights) >= threshold)
+
+    if(matchCols.map(c => c._2._3).sum > 0 ) {
+      edges = edges.filter(matchCols
+        .map(c => (c._1, c._2._3))
+        .filter(c => c._2 == 1)
+        .map(c => col(c._1) === col(gm(c._1)))
+        .reduce(_ && _)
+      )
+    }
+
     val edgesRDD = edges.select(idCol,gm(idCol))
       .map(r => Edge(r.getAs[VertexId](0), r.getAs[VertexId](1), null))
       .rdd
+
+    println("Graph connections formed")
+    edges.show()
 
     // generate nodes
     val nodesRDD = records.map(r => (r.getAs[VertexId](idCol), 1)).rdd
@@ -77,19 +113,6 @@ object EntityResolutionParameterized {
   }
 
 
-  def matchCriteria(c: String, maxDiff: Int): Column = {
-    if(maxDiff==0){
-      col(c)===col(gm(c))
-    } else {
-      soundex(col(c)) === soundex(col(gm(c))) ||
-      levenshtein(col(c), col(gm(c))) < maxDiff
-    }
-  }
-
-
-  def conditions(matchCols: Map[String, Int]): Column = {
-    matchCols.map(c => matchCriteria(c._1, c._2)).reduce(_ && _)
-  }
 
 
   def main(args: Array[String]): Unit = {
@@ -106,14 +129,14 @@ object EntityResolutionParameterized {
 //    val sep = "\t"
 //    val idCol = "VID"
 
-    val map = Map("zip" -> 0, "city" -> 1, "ip" -> 0)
+
+    // key -> (error, weight, mandatory, algorithm)
+    val map = Map("zip" -> (0,4,0), "city" -> (0,1,0), "ip" -> (0,1,0))
     val path = "data/adobe_analytics.csv"
     val sep = ","
     val idCol:String  = "ecid"
 
-    resolve(path, map, idCol, spark)
+    resolve(path, map, 0.8, idCol, spark)
   }
-
-
 
 }

@@ -14,6 +14,15 @@ Final merge them into common entities if the match rules are satisfied.
 1. Optimizations with the code for faster run time
 
 
+## Weight and Matching percentage
+Attributes can be assigned weights
+Formula for finding score for the weighted attributes
+
+sum(weight*match_percentage)/sum(weights)
+
+This value is compared with the threshold before going ahead and merging the entities
+
+
 ## In Progress
 1. weightages
 2. voting
