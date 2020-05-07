@@ -13,6 +13,9 @@ Final merge them into common entities if the match rules are satisfied.
 ### May 1st 2020
 1. Optimizations with the code for faster run time
 
+### May 5th 2020
+1. Added support for a mandatory field, it mandates that the specified
+key should always match in the results
 
 ## Weight and Matching percentage
 Attributes can be assigned weights
