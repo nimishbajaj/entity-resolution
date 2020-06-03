@@ -1,18 +1,14 @@
 import org.apache.log4j.Logger
+import org.apache.spark.graphx.{Edge, Graph, VertexId}
 import org.apache.spark.sql.functions._
-import org.apache.spark.sql.types.{IntegerType, LongType, StringType, StructField, StructType}
-import org.apache.spark.graphx._
-import org.apache.spark.graphx.{Edge, Graph, PartitionID, VertexId}
-import org.apache.spark.rdd.RDD
-import org.apache.spark.sql.{Column, DataFrame, Dataset, Row, SparkSession}
-import org.apache.commons.text.similarity
-import org.apache.commons.text.similarity.JaroWinklerSimilarity
+import org.apache.spark.sql.types.{IntegerType, LongType}
+import org.apache.spark.sql._
 
 object EntityResolutionParameterized {
 
   @transient lazy val log: Logger = Logger.getLogger(getClass.getName)
 
-  def getDataAndMirror(path: String, idCol: String, spark: SparkSession): (DataFrame, DataFrame) =  {
+  def getDataAndMirror(path: String, idCol: String, spark: SparkSession): (DataFrame, DataFrame) = {
     var records = spark.read.format("csv")
       .option("header", value = true)
       .option("delimiter", ",")
@@ -34,17 +30,17 @@ object EntityResolutionParameterized {
   }
 
   def matchCriteria(c: String, maxDiff: Int): Column = {
-    if(maxDiff==0){
+    if (maxDiff == 0) {
       (col(c) === col(gm(c))).cast(IntegerType)
     } else {
-//      (soundex(col(c)) === soundex(col(gm(c)))).cast(IntegerType)
-      (length(col(c)) - levenshtein(col(c), col(gm(c))))/length(col(c))
+      //      (soundex(col(c)) === soundex(col(gm(c)))).cast(IntegerType)
+      (length(col(c)) - levenshtein(col(c), col(gm(c)))) / length(col(c))
     }
   }
 
 
   def conditions(matchCols: Map[String, (Int, Int, Int)]): Column = {
-    matchCols.map(c => matchCriteria(c._1, c._2._1)*c._2._2).reduce(_ + _)
+    matchCols.map(c => matchCriteria(c._1, c._2._1) * c._2._2).reduce(_ + _)
   }
 
 
@@ -67,7 +63,7 @@ object EntityResolutionParameterized {
     var edges: Dataset[Row] = records
       .join(mirror, (conditions(matchCols) / sumWeights) >= threshold)
 
-    if(matchCols.map(c => c._2._3).sum > 0 ) {
+    if (matchCols.map(c => c._2._3).sum > 0) {
       edges = edges.filter(matchCols
         .map(c => (c._1, c._2._3))
         .filter(c => c._2 == 1)
@@ -76,7 +72,7 @@ object EntityResolutionParameterized {
       )
     }
 
-    val edgesRDD = edges.select(idCol,gm(idCol))
+    val edgesRDD = edges.select(idCol, gm(idCol))
       .map(r => Edge(r.getAs[VertexId](0), r.getAs[VertexId](1), null))
       .rdd
 
@@ -95,9 +91,9 @@ object EntityResolutionParameterized {
 
     val out = cc.vertices.toDF()
     val temp = records
-        .join(out, col(idCol) === $"_1")
-        .drop(idCol)
-        .withColumnRenamed("_2", idCol)
+      .join(out, col(idCol) === $"_1")
+      .drop(idCol)
+      .withColumnRenamed("_2", idCol)
 
     val exprs = records.columns.map(collect_set)
     val result = temp
@@ -108,11 +104,9 @@ object EntityResolutionParameterized {
 
     println(s"Number of records after Entity Resolution ${result.count()}")
 
-//    result.write.csv("newly-formed.csv")
+    //    result.write.csv("newly-formed.csv")
     result.show()
   }
-
-
 
 
   def main(args: Array[String]): Unit = {
@@ -124,17 +118,17 @@ object EntityResolutionParameterized {
       .getOrCreate()
 
 
-//    val map = Map("Email Domain" -> 1)
-//    val path = "data/Hubspot-contactsv3.csv"
-//    val sep = "\t"
-//    val idCol = "VID"
+    //    val map = Map("Email Domain" -> 1)
+    //    val path = "data/Hubspot-contactsv3.csv"
+    //    val sep = "\t"
+    //    val idCol = "VID"
 
 
     // key -> (error, weight, mandatory, algorithm)
-    val map = Map("zip" -> (0,4,0), "city" -> (0,1,0), "ip" -> (0,1,0))
+    val map = Map("zip" -> (0, 4, 0), "city" -> (0, 1, 0), "ip" -> (0, 1, 0))
     val path = "data/adobe_analytics.csv"
     val sep = ","
-    val idCol:String  = "ecid"
+    val idCol: String = "ecid"
 
     resolve(path, map, 0.8, idCol, spark)
   }
