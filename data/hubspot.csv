@@ -1,6 +1,4 @@
-ecid,ip,city,emailhash_from_url,zip,visid_high,visid_low,device
-8732487642,10.102.01.1,bangalore,YLKB73865GGFKN,560102,87348,949405,safari
-8732487642,10.2.01.2,mumbai,,274745,87432,32994,ios
-8732487642,10.102.01.12,bangalore,,560102,9847725,939588,safari
-8732487642,10.102.01.1,bangalore,,560102,87348,949405,safari
-8732487642,10.102.01.1,bangalore,,560102,87348,949405,ios
+hubspotutk,vid,emailhash,first_name,last_name
+43b330d6e02d380e35dff5974e0ffcee,73184,YLKB73865GGFKN,Paari,Singh
+43b330d6e02d380e35dff5974e0ffcee,73182,YLKB73865GGFKN,Paritosh,Singh
+123jkwhekjheakjsdhkajshd,73182,,Ashay,
