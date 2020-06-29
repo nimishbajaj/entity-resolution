@@ -32,12 +32,18 @@ sum(weight*match_percentage)/sum(weights)
 This value is compared with the threshold before going ahead and merging the entities
 
 
+## Benchmark results
+Graph connections formed 8997  
+Graph connections formed 24  
+Total Records before identity resolution 117993  
+Total Records After identity resolution 104500  
+Time taken: 4 minutes
+
+
 ## In Progress
-1. weightages
-2. voting
-3. hit level
-4. identify user persona (marketing guys)
-5. adobe with hubspot utk
+Testing with bigger datasets 
+
+
 
 
 

@@ -24,4 +24,6 @@ public class RuleDefinition {
         this.error_tolerance = error_tolerance;
         this.mandatory = mandatory;
     }
+
+
 }
