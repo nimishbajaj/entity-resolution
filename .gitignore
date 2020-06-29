@@ -6,3 +6,5 @@ target
 logs
 *.csv
 *test*
+.DS_Store
+*/.DS_Store
